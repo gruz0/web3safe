@@ -1,0 +1,24 @@
+linters:
+  enable-all: true
+  disable:
+    - ifshort
+    - nosnakecase
+    - scopelint
+    - structcheck
+    - varcheck
+    - golint
+    - maligned
+    - exhaustivestruct
+    - interfacer
+    - deadcode
+
+linters-settings:
+  depguard:
+    rules:
+      main:
+        allow:
+          - $gostd
+          - github.com/gruz0/web3safe
+
+run:
+  timeout: 5m
