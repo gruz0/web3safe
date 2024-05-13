@@ -1,0 +1,15 @@
+PRIVATE_KEY: private key
+BINANCE_ACCOUNT_PRIVATE_KEY: binance account private key
+PRIVATE_KEY_INFURA: private key infura
+BINANCE_PRIVATE_KEY_VALUE: binance private key
+MNEMONIC_WORDS: mnemonic words
+MNEMONIC:
+private_key: another private key
+
+nested:
+  PRIVATE_KEY: nested private key
+  SECRET_MNEMONIC: nested mnemonic
+
+  inside:
+    PASSWORD: nested password
+    MNEMONIC:

@@ -35,8 +35,9 @@ type Rules struct {
 }
 
 type Config struct {
-	Rules       []Rule   `yaml:"rules"`
-	IgnoreFiles []string `yaml:"ignoreFiles"`
+	Rules           []Rule   `yaml:"rules"`
+	IgnoreFiles     []string `yaml:"ignoreFiles"`
+	IgnoreYAMLFiles []string `yaml:"ignoreYamlFiles"`
 }
 
 func LoadConfig(configFilePath string) (Config, error) {
@@ -61,6 +62,9 @@ func GetDefaultConfig() Config {
 	config.IgnoreFiles = make([]string, 0)
 	config.IgnoreFiles = append(config.IgnoreFiles, ".env.example")
 	config.IgnoreFiles = append(config.IgnoreFiles, ".env.sample")
+
+	config.IgnoreYAMLFiles = make([]string, 0)
+	config.IgnoreYAMLFiles = append(config.IgnoreYAMLFiles, ".example.yml")
 
 	config.Rules = append(config.Rules, addDefaultRule("PRIVATE_KEY"))
 	config.Rules = append(config.Rules, addDefaultRule("MNEMONIC"))
