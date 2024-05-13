@@ -1,3 +1,5 @@
+export GOPROXY = https://proxy.golang.org
+
 GOCMD=go
 GOBUILD=$(GOCMD) build
 GOCLEAN=$(GOCMD) clean
