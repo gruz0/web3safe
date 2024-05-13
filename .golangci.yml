@@ -1,6 +1,8 @@
 linters:
   enable-all: true
   disable:
+    - gomnd
+    - execinquery
     - ifshort
     - nosnakecase
     - scopelint
