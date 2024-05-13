@@ -1,5 +1,5 @@
 # Original: https://github.com/golangci/golangci-lint/blob/master/.github/workflows/pr.yml
-name: CI
+name: Lint
 on:
   push:
     branches:

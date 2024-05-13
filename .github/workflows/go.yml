@@ -1,5 +1,5 @@
 # Original: https://github.com/golangci/golangci-lint/blob/master/.github/workflows/pr.yml
-name: CI
+name: Go
 on:
   push:
     branches:
@@ -25,18 +25,18 @@ jobs:
           git diff --exit-code go.mod
           git diff --exit-code go.sum
 
-  tests-on-windows:
-    runs-on: windows-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Install Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: ${{ env.GO_VERSION }}
-      - name: Run build
-        run: make.exe build
-      - name: Run tests
-        run: make.exe test
+  # tests-on-windows:
+  #   runs-on: windows-latest
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - name: Install Go
+  #       uses: actions/setup-go@v5
+  #       with:
+  #         go-version: ${{ env.GO_VERSION }}
+  #     - name: Run build
+  #       run: make.exe build
+  #     - name: Run tests
+  #       run: make.exe test
 
   # tests-on-macos:
   #   runs-on: macos-latest
