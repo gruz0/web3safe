@@ -158,7 +158,7 @@ func traverse(value interface{}) []string {
 		}
 
 		if value.Kind() == reflect.Slice || value.Kind() == reflect.Array {
-			for i := 0; i < value.Len(); i++ {
+			for i := range make([]struct{}, value.Len()) {
 				processQueue(value.Index(i), fmt.Sprintf("%s[%d]", path, i))
 			}
 
