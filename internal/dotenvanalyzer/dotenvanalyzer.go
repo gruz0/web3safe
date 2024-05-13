@@ -37,7 +37,7 @@ func NewDotEnvAnalyzer(pathToScan string, config config.Config) *DotEnvAnalyzer 
 
 func (s *DotEnvAnalyzer) Run() error {
 	filesToIgnore := make(map[string]bool)
-	for _, fileToIgnore := range s.config.IgnoreFiles {
+	for _, fileToIgnore := range s.config.IgnoreEnvFiles {
 		filesToIgnore[fileToIgnore] = true
 	}
 
