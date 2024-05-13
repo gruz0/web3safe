@@ -1,0 +1,24 @@
+# Original: https://github.com/golangci/golangci-lint/blob/master/.github/workflows/pr.yml
+name: CI
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+env:
+  GO_VERSION: '1.22'
+
+jobs:
+  golangci-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+      - name: lint
+        uses: golangci/golangci-lint-action@v5.3.0
+        with:
+          version: latest
