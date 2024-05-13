@@ -1,0 +1,20 @@
+---
+
+- name: Monitoring
+  env:
+    mnemonic: "secret phrase"
+  hosts: "domain.tld"
+  connection: local
+  password: "secret"
+  vars:
+    errors: []
+
+  roles:
+    - role: check_remote_file_http_status
+
+- name: Second key
+  values:
+    - first
+    - second
+  "[brackets]": test
+  2: 3

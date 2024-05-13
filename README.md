@@ -25,8 +25,9 @@ your environment variables and make sure your projects stay secure.
 
 - Analyzes shell environment variables for sensitive information.
 - Scans .env files for sensitive data such as passwords, API keys, and other confidential information.
+- Scans all keys in YAML files for sensitive data for sensitive information.
 - Provides customizable and extendable rules.
-- Supports exclusion of certain .env files from the analysis.
+- Supports exclusion of certain files from the analysis.
 
 ## Getting Started
 
@@ -48,6 +49,7 @@ Web3Safe is a command-line tool written in Go. To install it, follow these steps
    ```
    dotenvanalyzer
    envanalyzer
+   yamlanalyzer
    web3safe
    ```
 
@@ -75,6 +77,17 @@ You can also customize the analysis by providing additional flags:
 
 By default, this tool scans .env files starting from a given directory
 recursively and display any sensitive information found inside `.env` files.
+
+You can also customize the analysis by providing additional flags:
+
+- `-help`: Show all the available commands.
+- `-config`: Specify a custom configuration file for rule customization.
+- `-path`: Path to start scan from (default: current dir).
+
+### YamlAnalyzer
+
+By default, this tool scans YAML files (`yml` and `yaml`) starting from a given
+directory recursively and display any sensitive information found inside files.
 
 You can also customize the analysis by providing additional flags:
 
