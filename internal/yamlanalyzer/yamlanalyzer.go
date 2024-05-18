@@ -1,7 +1,6 @@
 package yamlanalyzer
 
 import (
-	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -13,19 +12,12 @@ import (
 )
 
 const (
-	reportMessageFormat = "%s: found sensitive key \"%s\" in %s"
-)
-
-var (
-	ErrFailedToAccessPath       = errors.New("failed to access path")
-	ErrFailedToParseFile        = errors.New("failed to parse file")
-	ErrFailedToAnalyzeVariables = errors.New("failed to analyze variables")
+	reportMessageFormat = "%s: found sensitive key %q in %s"
 )
 
 type YamlAnalyzer struct {
-	pathToScan string
-	config     config.Config
-	report     []string
+	config config.Config
+	report []string
 }
 
 type match struct {
@@ -33,57 +25,97 @@ type match struct {
 	Variable string
 }
 
-func NewYamlAnalyzer(pathToScan string, config config.Config) *YamlAnalyzer {
+func NewYamlAnalyzer(config config.Config) *YamlAnalyzer {
 	return &YamlAnalyzer{
-		pathToScan: pathToScan,
-		config:     config,
-		report:     make([]string, 0),
+		config: config,
+		report: make([]string, 0),
 	}
 }
 
-func (s *YamlAnalyzer) Run() error {
-	err := filepath.Walk(s.pathToScan, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return errors.Join(ErrFailedToAccessPath, err)
-		}
-
-		if !info.Mode().IsRegular() {
-			return nil
-		}
-
-		if !s.isYAML(info.Name()) {
-			return nil
-		}
-
-		if info.Size() == 0 {
-			return nil
-		}
-
-		for _, fileToIgnore := range s.config.IgnoreYAMLFiles {
-			if strings.Contains(info.Name(), fileToIgnore) {
-				return nil
-			}
-		}
-
-		if err := s.analyzeKeys(path); err != nil {
-			return errors.Join(ErrFailedToAnalyzeVariables, err)
-		}
-
-		return nil
-	})
-	if err != nil {
-		return fmt.Errorf("failed to walk directory: %w", err)
+func (s *YamlAnalyzer) ScanDirectory(directoryPath string, recursive bool) error {
+	if recursive {
+		return s.scanDirectoryRecursively(directoryPath)
 	}
 
-	return nil
+	return s.scanDirectory(directoryPath)
+}
+
+func (s *YamlAnalyzer) ScanFile(filePath string) error {
+	filename := filepath.Base(filePath)
+
+	if s.isFileSkippable(filename) {
+		return nil
+	}
+
+	return s.analyzeKeys(filePath)
 }
 
 func (s *YamlAnalyzer) Report() []string {
 	return s.report
 }
 
-func (s *YamlAnalyzer) isYAML(name string) bool {
-	return strings.HasSuffix(name, ".yaml") || strings.HasSuffix(name, ".yml")
+func (s *YamlAnalyzer) scanDirectoryRecursively(directoryPath string) error {
+	err := filepath.WalkDir(directoryPath, func(path string, entry os.DirEntry, err error) error {
+		if err != nil {
+			return fmt.Errorf("failed to access directory: %w", err)
+		}
+
+		if entry.IsDir() {
+			return nil
+		}
+
+		if s.isFileSkippable(entry.Name()) {
+			return nil
+		}
+
+		if err := s.analyzeKeys(path); err != nil {
+			return fmt.Errorf("failed to analyze file: %w", err)
+		}
+
+		return nil
+	})
+	if err != nil {
+		return fmt.Errorf("failed to walk directory recursively: %w", err)
+	}
+
+	return nil
+}
+
+func (s *YamlAnalyzer) scanDirectory(directoryPath string) error {
+	files, err := os.ReadDir(directoryPath)
+	if err != nil {
+		return fmt.Errorf("failed to walk directory: %w", err)
+	}
+
+	for _, entry := range files {
+		if entry.IsDir() {
+			continue
+		}
+
+		if s.isFileSkippable(entry.Name()) {
+			continue
+		}
+
+		if err := s.analyzeKeys(filepath.Join(directoryPath, entry.Name())); err != nil {
+			return fmt.Errorf("failed to analyze file: %w", err)
+		}
+	}
+
+	return nil
+}
+
+func (s *YamlAnalyzer) isFileSkippable(fileName string) bool {
+	if !strings.HasSuffix(fileName, ".yaml") && !strings.HasSuffix(fileName, ".yml") {
+		return true
+	}
+
+	for _, fileToIgnore := range s.config.IgnoreYAMLFiles {
+		if strings.Contains(fileName, fileToIgnore) {
+			return true
+		}
+	}
+
+	return false
 }
 
 func (s *YamlAnalyzer) analyzeKeys(filePath string) error {
@@ -94,7 +126,7 @@ func (s *YamlAnalyzer) analyzeKeys(filePath string) error {
 
 	var data interface{}
 	if err := yaml.Unmarshal(yamlData, &data); err != nil {
-		return errors.Join(ErrFailedToParseFile, err)
+		return fmt.Errorf("failed to parse file %s: %w", filePath, err)
 	}
 
 	keys := traverse(data)

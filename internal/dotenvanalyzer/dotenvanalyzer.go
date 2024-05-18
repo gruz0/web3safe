@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/gruz0/web3safe/internal/config"
+	"github.com/gruz0/web3safe/internal/utils"
 )
 
 const (
@@ -15,75 +16,116 @@ const (
 	reportMessageFormat   = "%s:%d: found sensitive variable %s"
 )
 
-var (
-	ErrFailedToAccessPath          = errors.New("failed to access path")
-	ErrFailedToAnalyzeVariables    = errors.New("failed to analyze variables")
-	ErrEnvVariableHasInvalidFormat = errors.New("variable has invalid ENV format")
-)
+var ErrEnvVariableHasInvalidFormat = errors.New("variable has invalid ENV format")
 
 type DotEnvAnalyzer struct {
-	pathToScan string
-	config     config.Config
-	report     []string
+	config        config.Config
+	report        []string
+	filesToIgnore map[string]bool
 }
 
-func NewDotEnvAnalyzer(pathToScan string, config config.Config) *DotEnvAnalyzer {
-	return &DotEnvAnalyzer{
-		pathToScan: pathToScan,
-		config:     config,
-		report:     make([]string, 0),
-	}
-}
-
-func (s *DotEnvAnalyzer) Run() error {
+func NewDotEnvAnalyzer(config config.Config) *DotEnvAnalyzer {
 	filesToIgnore := make(map[string]bool)
-	for _, fileToIgnore := range s.config.IgnoreEnvFiles {
+	for _, fileToIgnore := range config.IgnoreEnvFiles {
 		filesToIgnore[fileToIgnore] = true
 	}
 
-	err := filepath.Walk(s.pathToScan, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return errors.Join(ErrFailedToAccessPath, err)
-		}
+	return &DotEnvAnalyzer{
+		config:        config,
+		report:        make([]string, 0),
+		filesToIgnore: filesToIgnore,
+	}
+}
 
-		if !info.Mode().IsRegular() {
-			return nil
-		}
-
-		if !s.hasEnvPrefix(info.Name()) {
-			return nil
-		}
-
-		if filesToIgnore[info.Name()] {
-			return nil
-		}
-
-		if err := s.analyzeVariables(path); err != nil {
-			return errors.Join(ErrFailedToAnalyzeVariables, err)
-		}
-
-		return nil
-	})
-	if err != nil {
-		return fmt.Errorf("failed to walk directory: %w", err)
+func (s *DotEnvAnalyzer) ScanDirectory(directoryPath string, recursive bool) error {
+	if recursive {
+		return s.scanDirectoryRecursively(directoryPath)
 	}
 
-	return nil
+	return s.scanDirectory(directoryPath)
+}
+
+func (s *DotEnvAnalyzer) ScanFile(filePath string) error {
+	filename := filepath.Base(filePath)
+
+	if s.isFileSkippable(filename) {
+		return nil
+	}
+
+	return s.analyzeVariables(filePath)
 }
 
 func (s *DotEnvAnalyzer) Report() []string {
 	return s.report
 }
 
-func (s *DotEnvAnalyzer) hasEnvPrefix(name string) bool {
-	return strings.HasPrefix(name, ".env")
+func (s *DotEnvAnalyzer) scanDirectoryRecursively(directoryPath string) error {
+	err := filepath.WalkDir(directoryPath, func(path string, entry os.DirEntry, err error) error {
+		if err != nil {
+			return fmt.Errorf("failed to access directory: %w", err)
+		}
+
+		if entry.IsDir() {
+			return nil
+		}
+
+		if s.isFileSkippable(entry.Name()) {
+			return nil
+		}
+
+		if err := s.analyzeVariables(path); err != nil {
+			return fmt.Errorf("failed to analyze file: %w", err)
+		}
+
+		return nil
+	})
+	if err != nil {
+		return fmt.Errorf("failed to walk directory recursively: %w", err)
+	}
+
+	return nil
+}
+
+func (s *DotEnvAnalyzer) scanDirectory(directoryPath string) error {
+	files, err := os.ReadDir(directoryPath)
+	if err != nil {
+		return fmt.Errorf("failed to walk directory: %w", err)
+	}
+
+	for _, entry := range files {
+		if entry.IsDir() {
+			continue
+		}
+
+		if s.isFileSkippable(entry.Name()) {
+			continue
+		}
+
+		if err := s.analyzeVariables(filepath.Join(directoryPath, entry.Name())); err != nil {
+			return fmt.Errorf("failed to analyze file: %w", err)
+		}
+	}
+
+	return nil
+}
+
+func (s *DotEnvAnalyzer) isFileSkippable(fileName string) bool {
+	if !strings.HasPrefix(fileName, ".env") {
+		return true
+	}
+
+	if s.filesToIgnore[fileName] {
+		return true
+	}
+
+	return false
 }
 
 //nolint:funlen,gocognit,cyclop
 func (s *DotEnvAnalyzer) analyzeVariables(filePath string) error {
-	lines, err := getFileContent(filePath)
+	lines, err := utils.GetFileContent(filePath)
 	if err != nil {
-		return err
+		return fmt.Errorf("%w", err)
 	}
 
 	for idx, line := range lines {
@@ -97,7 +139,7 @@ func (s *DotEnvAnalyzer) analyzeVariables(filePath string) error {
 
 		parts := strings.SplitN(line, "=", envVariablePartsCount)
 		if len(parts) != envVariablePartsCount {
-			return ErrEnvVariableHasInvalidFormat
+			return fmt.Errorf("%w: %s", ErrEnvVariableHasInvalidFormat, line)
 		}
 
 		// If value is empty, just skip
@@ -166,13 +208,4 @@ func (s *DotEnvAnalyzer) analyzeVariables(filePath string) error {
 	}
 
 	return nil
-}
-
-func getFileContent(filePath string) ([]string, error) {
-	content, err := os.ReadFile(filePath)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read file %s: %w", filePath, err)
-	}
-
-	return strings.Split(string(content), "\n"), nil
 }
