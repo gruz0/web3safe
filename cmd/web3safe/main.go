@@ -1,29 +1,31 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"os"
 
-	"github.com/gruz0/web3safe/internal/config"
-	"github.com/gruz0/web3safe/internal/flags"
+	"github.com/gruz0/web3safe/internal/app"
+	"github.com/gruz0/web3safe/internal/utils"
 )
 
 func main() {
-	flags := flags.ParseFlags()
+	success, err := app.Run(os.Args)
+	if err != nil {
+		var appError *app.Error
 
-	if flags.GenerateConfig {
-		generateConfig()
-	}
-}
+		if errors.As(err, &appError) {
+			fmt.Fprintln(os.Stderr, appError.Error())
+			os.Exit(appError.ExitCode())
+		}
 
-func generateConfig() {
-	newConfigFilePath := config.GetDefaultConfigFilePath()
-
-	if err := config.GenerateConfig(newConfigFilePath); err != nil {
-		fmt.Fprintf(os.Stderr, "Error generating config: %v\n", err)
-		os.Exit(1)
+		fmt.Fprintf(os.Stderr, "Unhandled error: %v", err)
+		os.Exit(utils.ExitError)
 	}
 
-	fmt.Fprintf(os.Stdout, "New configuration file generated at %s\n", newConfigFilePath)
-	os.Exit(0)
+	if success {
+		os.Exit(utils.ExitSuccess)
+	}
+
+	os.Exit(utils.ExitError)
 }

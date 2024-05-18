@@ -45,55 +45,91 @@ Web3Safe is a command-line tool written in Go. To install it, follow these steps
    make build
    ```
 
-3. All apps will be placed inside `bin` directory:
+3. App will be placed inside `bin` directory:
    ```
-   dotenvanalyzer
-   envanalyzer
-   yamlanalyzer
    web3safe
    ```
 
-Web3Safe includes three tools: Web3Safe itself, Shell ENV Analyzer and Dotenv
-Analyzer.
+### Docker
 
-### Web3Safe
+TBD
 
-This tool is designed for creating a configuration file for the other apps.
+## Usage
 
-- `-help`: Show all the available commands.
-- `-generateConfig`: Generate a new configuration file.
+### Create a new configuration file
 
-### EnvAnalyzer
+```sh
+web3safe config -create [-config "/path/to/config.yml"] [-force]
+```
 
-This tool scans the current user's environment variables and display any
+### Print the default config (or a given config) to your terminal
+
+```sh
+web3safe config -print [-config "/path/to/config.yml"]
+```
+
+### Analyze shell ENV variables
+
+This tool scans the current user's shell environment variables and display any
 sensitive information found.
 
-You can also customize the analysis by providing additional flags:
+```sh
+web3safe shellenv [-config "/path/to/config.yml"]
+```
 
-- `-help`: Show all the available commands.
-- `-config`: Specify a custom configuration file for rule customization.
+Example:
 
-### DotEnvAnalyzer
+```sh
+$ MNEMONIC=test web3safe shellenv
 
-By default, this tool scans .env files starting from a given directory
-recursively and display any sensitive information found inside `.env` files.
+Shell ENV has a sensitive variable: MNEMONIC
+```
 
-You can also customize the analysis by providing additional flags:
+### Analyze dotenv (.env) files
 
-- `-help`: Show all the available commands.
-- `-config`: Specify a custom configuration file for rule customization.
-- `-path`: Path to start scan from (default: current dir).
-
-### YamlAnalyzer
-
-By default, this tool scans YAML files (`yml` and `yaml`) starting from a given
-directory recursively and display any sensitive information found inside files.
+```sh
+web3safe dotenv [-config "/path/to/config.yml"]
+```
 
 You can also customize the analysis by providing additional flags:
 
-- `-help`: Show all the available commands.
-- `-config`: Specify a custom configuration file for rule customization.
-- `-path`: Path to start scan from (default: current dir).
+- `-dir`: Path to the directory to scan
+- `-recursive`: If set, the directory will be scanned recursively
+- `-file`: Path to the file to scan
+
+Example:
+
+```sh
+$ web3safe dotenv -dir . -recursive
+
+samples/.env:5: found sensitive variable MNEMONIC_WORDS
+samples/.env:7: found sensitive variable private_key
+samples/.env.export:1: found sensitive variable PRIVATE_KEY
+samples/.env.export:2: found sensitive variable BINANCE_ACCOUNT_PRIVATE_KEY
+```
+
+### Analyze YAML files
+
+```sh
+web3safe yaml [-config "/path/to/config.yml"]
+```
+
+You can also customize the analysis by providing additional flags:
+
+- `-dir`: Path to the directory to scan
+- `-recursive`: If set, the directory will be scanned recursively
+- `-file`: Path to the file to scan
+
+Example:
+
+```sh
+$ web3safe yaml -dir . -recursive
+
+samples/config.yml: found sensitive key "PASSWORD" in .nested.inside.PASSWORD
+samples/config.yml: found sensitive key "MNEMONIC" in .nested.inside.MNEMONIC
+samples/playbook.yml: found sensitive key "password" in [0].password
+samples/playbook.yml: found sensitive key "mnemonic" in [0].env.mnemonic
+```
 
 ## Contributing
 

@@ -3,23 +3,13 @@ package config
 import (
 	"errors"
 	"os"
-	"path/filepath"
-	"runtime"
 
 	"gopkg.in/yaml.v2"
 )
 
-const (
-	appName             = "web3safe"
-	configDirPermission = 0o755
-	configPermission    = 0o600
-)
-
 var (
-	ErrFailedToReadFile   = errors.New("failed to read file")
-	ErrFailedToParseFile  = errors.New("failed to parse file")
-	ErrFailedToEncodeFile = errors.New("failed to encode file")
-	ErrFailedToWriteFile  = errors.New("failed to write file")
+	ErrFailedToReadFile  = errors.New("failed to read config")
+	ErrFailedToParseFile = errors.New("failed to parse config")
 )
 
 type Rule struct {
@@ -40,17 +30,17 @@ type Config struct {
 	IgnoreYAMLFiles []string `yaml:"ignoreYamlFiles"`
 }
 
-func LoadConfig(configFilePath string) (Config, error) {
-	var config Config
-
+func Load(configFilePath string) (Config, error) {
 	yamlFile, err := os.ReadFile(configFilePath)
 	if err != nil {
-		return config, errors.Join(ErrFailedToReadFile, err)
+		return Config{}, ErrFailedToReadFile
 	}
+
+	var config Config
 
 	err = yaml.Unmarshal(yamlFile, &config)
 	if err != nil {
-		return config, errors.Join(ErrFailedToParseFile, err)
+		return config, ErrFailedToParseFile
 	}
 
 	return config, nil
@@ -77,20 +67,6 @@ func GetDefaultConfig() Config {
 	return config
 }
 
-func GenerateConfig(filePath string) error {
-	yamlData, err := yaml.Marshal(GetDefaultConfig())
-	if err != nil {
-		return errors.Join(ErrFailedToEncodeFile, err)
-	}
-
-	err = os.WriteFile(filePath, yamlData, configPermission)
-	if err != nil {
-		return errors.Join(ErrFailedToWriteFile, err)
-	}
-
-	return nil
-}
-
 func addDefaultRule(key string) Rule {
 	return Rule{
 		Key:     key,
@@ -99,29 +75,4 @@ func addDefaultRule(key string) Rule {
 		Suffix:  true,
 		Include: true,
 	}
-}
-
-func GetDefaultConfigFilePath() string {
-	var configDir string
-
-	switch osType := runtime.GOOS; osType {
-	case "windows":
-		appData := os.Getenv("APPDATA")
-		configDir = filepath.Join(appData, appName)
-	case "darwin", "linux":
-		homeDir, err := os.UserHomeDir()
-		if err != nil {
-			panic("Unable to get home directory")
-		}
-
-		configDir = filepath.Join(homeDir, ".config", appName)
-	default:
-		panic("Unsupported operating system")
-	}
-
-	if err := os.MkdirAll(configDir, configDirPermission); err != nil {
-		panic(err)
-	}
-
-	return filepath.Join(configDir, "config.yaml")
 }
